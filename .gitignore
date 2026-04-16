@@ -1,0 +1,4 @@
+node_modules/
+.env
+ca.pem
+.DS_Store
