@@ -185,6 +185,7 @@ app.post('/credenciais', async (req, res) => {
 });
 
 // CORRIGIDO: usa a variável PORT (sem A)
-app.listen(8081, () => {
+const PORT=process.env.PORT|| 8081
+app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
