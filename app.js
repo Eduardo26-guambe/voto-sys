@@ -9,7 +9,6 @@ const fs = require('fs');
 
 const app = express();
 
-const PORT = process.env.PORT || 8081;  // ← tem que ser PORT, não PORTA
 
 app.use(express.urlencoded({ extended: true }));
 app.set('view engine', 'ejs');
@@ -186,6 +185,6 @@ app.post('/credenciais', async (req, res) => {
 });
 
 // CORRIGIDO: usa a variável PORT (sem A)
-app.listen(PORT, () => {
+app.listen(8081, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
