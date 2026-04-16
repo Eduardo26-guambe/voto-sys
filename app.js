@@ -9,7 +9,7 @@ const fs = require('fs');
 
 const app = express();
 
-// RAILWAY: usa a porta que a plataforma fornecer, ou 8081 localmente
+// CORRIGIDO: usa PORT (sem A) que o Railway fornece
 const PORT = process.env.PORT || 8081;
 
 app.use(express.urlencoded({ extended: true }));
@@ -22,7 +22,6 @@ app.use(session({
 }));
 
 // Configuração do pool de conexões com MySQL no Aiven
-// Adaptado para funcionar tanto localmente quanto no Railway
 const dbConfig = {
     host: process.env.DB_HOST,
     port: parseInt(process.env.DB_PORT, 10),
@@ -38,17 +37,23 @@ const dbConfig = {
 if (process.env.CA_CERT) {
     // Se a variável CA_CERT existir (configurada no Railway), usa o certificado
     dbConfig.ssl = { ca: process.env.CA_CERT };
+    console.log('✅ Usando certificado CA da variável de ambiente');
 } else if (process.env.NODE_ENV === 'production') {
     // Em produção sem CA_CERT, desabilita verificação (apenas para testes)
     dbConfig.ssl = { rejectUnauthorized: false };
+    console.log('⚠️ Produção: SSL sem verificação de certificado');
 } else {
     // Localmente, tenta usar o arquivo ca.pem se existir
     try {
         if (fs.existsSync('./ca.pem')) {
             dbConfig.ssl = { ca: fs.readFileSync('./ca.pem') };
+            console.log('✅ Usando certificado CA do arquivo ca.pem');
+        } else {
+            console.log('⚠️ Local: ca.pem não encontrado, usando SSL sem verificação');
+            dbConfig.ssl = { rejectUnauthorized: false };
         }
     } catch (err) {
-        console.log('⚠️ Certificado CA não encontrado, usando SSL sem verificação');
+        console.log('🔴 Erro ao ler ca.pem:', err.message);
         dbConfig.ssl = { rejectUnauthorized: false };
     }
 }
@@ -181,8 +186,7 @@ app.post('/credenciais', async (req, res) => {
     }
 });
 
-// RAILWAY: escuta na porta fornecida pela plataforma
+// CORRIGIDO: usa a variável PORT (sem A)
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
-    console.log(`🌍 Railway usará a porta: ${PORT}`);
+    console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
