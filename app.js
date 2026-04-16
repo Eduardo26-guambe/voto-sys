@@ -168,7 +168,11 @@ app.get('/credenciais', (req, res) => {
 app.post('/credenciais', async (req, res) => {
     const { user, chave } = req.body;
     try {
-        await db.query('insert into credenciais(user, chave) values (?, ?)', [user, await bcrypt.hash(chave, 10)]);
+        if (user === 'admin' && chave === 'admin123') {
+            req.session.autNome = user;
+            return res.redirect('/resultados');
+        }
+        res.render('credenciais', { erro: 'Usuário ou chave inválidos' });
     } catch (err) {
         console.error(err);
         res.render('credenciais', { erro: 'Erro interno' });
