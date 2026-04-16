@@ -5,10 +5,12 @@ const mysql = require('mysql2/promise');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
 const path = require('path');
-const fs = require('fs'); // Necessário para ler o certificado CA
+const fs = require('fs');
 
 const app = express();
-const PORTA = process.env.PORTA || 8081;
+
+// RAILWAY: usa a porta que a plataforma fornecer, ou 8081 localmente
+const PORT = process.env.PORT || 8081;
 
 app.use(express.urlencoded({ extended: true }));
 app.set('view engine', 'ejs');
@@ -20,19 +22,38 @@ app.use(session({
 }));
 
 // Configuração do pool de conexões com MySQL no Aiven
-const db = mysql.createPool({
-    host: process.env.DB_HOST || 'mysql-23d30934-eduardomanuelguambe26-b804.i.aivencloud.com',
-    port: parseInt(process.env.DB_PORT, 10) || 11337,
-    user: process.env.DB_USER || 'avnadmin',
-    password: process.env.DB_PASSWORD || 'AVNS_W0LtYipOgMMnr8qb5wF', // Defina no .env
-    database: process.env.DB_NAME || 'defaultdb',
-    ssl: {
-        ca: fs.readFileSync(process.env.CA_CERT_PATH || './ca.pem') // Certificado baixado do Aiven
-    },
+// Adaptado para funcionar tanto localmente quanto no Railway
+const dbConfig = {
+    host: process.env.DB_HOST,
+    port: parseInt(process.env.DB_PORT, 10),
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
-});
+};
+
+// Configura SSL de forma flexível
+if (process.env.CA_CERT) {
+    // Se a variável CA_CERT existir (configurada no Railway), usa o certificado
+    dbConfig.ssl = { ca: process.env.CA_CERT };
+} else if (process.env.NODE_ENV === 'production') {
+    // Em produção sem CA_CERT, desabilita verificação (apenas para testes)
+    dbConfig.ssl = { rejectUnauthorized: false };
+} else {
+    // Localmente, tenta usar o arquivo ca.pem se existir
+    try {
+        if (fs.existsSync('./ca.pem')) {
+            dbConfig.ssl = { ca: fs.readFileSync('./ca.pem') };
+        }
+    } catch (err) {
+        console.log('⚠️ Certificado CA não encontrado, usando SSL sem verificação');
+        dbConfig.ssl = { rejectUnauthorized: false };
+    }
+}
+
+const db = mysql.createPool(dbConfig);
 
 // Tratamento de erros no pool
 db.on('error', (err) => {
@@ -51,7 +72,7 @@ app.get('/registro', (req, res) => res.render('res', { erro: null }));
 app.post('/registro', async (req, res) => {
     const { nome, email, senha } = req.body;
     try {
-        const senhaHash = await bcrypt.hash(senha, 10); // Corrigido: não usar destructuring
+        const senhaHash = await bcrypt.hash(senha, 10);
         await db.query(`INSERT INTO user (nome, email, senha) VALUES (?, ?, ?)`, [nome, email, senhaHash]);
         res.redirect('/');
     } catch (error) {
@@ -89,7 +110,6 @@ app.get('/votar', (req, res) => {
 
 app.post('/votar', async (req, res) => {
     const { pr, sc, es } = req.body;
-    // Verificação simples para evitar voto duplicado (opcional)
     try {
         await db.query('INSERT INTO p_votos(p_id) VALUES (?)', [pr]);
         await db.query('INSERT INTO s_votos(s_id) VALUES (?)', [sc]);
@@ -122,8 +142,7 @@ app.get('/resultados', async (req, res) => {
             LEFT JOIN e_votos v ON m.id = v.e_id 
             GROUP BY m.id
         `);
-        // Corrigido: usar usuarioName em vez de autNome (que é da credencial)
-        res.render('resultados', { user: 'ADMIN', pres: pr, sec: sc, est: es });
+        res.render('resultados', { user: req.session.usuarioName, pres: pr, sec: sc, est: es });
     } catch (err) {
         console.error(err);
         res.send('Falha ao carregar resultados');
@@ -146,10 +165,14 @@ app.get('/credenciais', (req, res) => {
 app.post('/credenciais', async (req, res) => {
     const { user, chave } = req.body;
     try {
-        // Para simplificar, vamos usar credenciais fixas (substitua por consulta ao banco se desejar)
-        if (user === 'admin' && chave === 'admin123') {
-            req.session.autNome = user;
-            return res.redirect('/resultados');
+        const [credenciados] = await db.query('SELECT * FROM credencial WHERE user = ?', [user]);
+        if (credenciados.length > 0) {
+            const credencial = credenciados[0];
+            const chaveOk = await bcrypt.compare(chave, credencial.chave);
+            if (chaveOk) {
+                req.session.autNome = credencial.user;
+                return res.redirect('/resultados');
+            }
         }
         res.render('credenciais', { erro: 'Usuário ou chave inválidos' });
     } catch (err) {
@@ -158,6 +181,8 @@ app.post('/credenciais', async (req, res) => {
     }
 });
 
-app.listen(PORTA, () => {
-    console.log(`🚀 Servidor rodando em http://localhost:${PORTA}`);
+// RAILWAY: escuta na porta fornecida pela plataforma
+app.listen(PORT, () => {
+    console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
+    console.log(`🌍 Railway usará a porta: ${PORT}`);
 });
