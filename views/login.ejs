@@ -1,0 +1,32 @@
+<title>Login</title>
+<style>
+    *{font-family: system-ui;}
+    body{font-family: system-ui;background: #f4f4f9;display: flex; 
+    justify-content: center;padding: 50px;align-items: center; }
+    form{background: white;padding: 2rem; border-radius: 8px;box-shadow: 0 4px 6px #36363681; width: 100%;max-width: 400px}
+    .input{width: 100%;padding: 10px;margin: 10px 0;border: 1px solid #ddd;border-radius: 6px;box-sizing: border-box; font-size: 18px;}
+    button{ width: 100%;padding: 10px;background: #28a745;color: white;border: none;border-radius: 4px;cursor: pointer;font-size: 16px;}
+    button:hover{background: #218838;}
+    div{position: relative; margin-top: 10px; margin-bottom: 10px;}
+    h1{color: #333;text-align: center; margin: 15px;}
+    a{color: #0000ff;} 
+</style>
+<form action="/login" method="post">
+    <h1>Login</h1>
+    <% if(erro){%> <div style="color: red;"><%=erro%></div> <%}%>
+
+    <input class="input" type="email" name="email" placeholder="E-mail" required>
+    <input class="input" type="password" name="senha" id="pass" placeholder="Palavrapass" required>
+    <div><input type="checkbox" id="check"> Ver senha</div>
+    <button>Logar</button>
+    <div>Não tem conta? <a href="/registro">Registre-se aqui!</a></div>
+    <div>Entrar como ADM <a class="adim" href="/credenciais">Aqui!</a><div>
+</form>
+<script>
+    const pass=document.getElementById('pass')
+    const check=document.getElementById('check')
+
+    check.addEventListener('change', ()=>{
+        pass.type=check.checked? 'text': 'password'
+    })
+</script>
