@@ -21,11 +21,11 @@ app.use(session({
 
 // Configuração do pool de conexões com MySQL no Aiven
 const dbConfig = {
-    host: process.env.DB_HOST,
-    port: parseInt(process.env.DB_PORT, 10),
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
+    host: process.env.DB_HOST || 'mysql-23d30934-eduardomanuelguambe26-b804.i.aivencloud.com',
+    port: parseInt(process.env.DB_PORT, 10)|| 11337,
+    user: process.env.DB_USER ||'avnadmin',
+    password: process.env.DB_PASSWORD|| 'AVNS_W0LtYipOgMMnr8qb5wF',
+    database: process.env.DB_NAME||'defaultdb',
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
