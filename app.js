@@ -9,8 +9,7 @@ const fs = require('fs');
 
 const app = express();
 
-// CORRIGIDO: usa PORT (sem A) que o Railway fornece
-const PORT = process.env.PORT || 8081;
+const PORT = process.env.PORT || 8081;  // ← tem que ser PORT, não PORTA
 
 app.use(express.urlencoded({ extended: true }));
 app.set('view engine', 'ejs');
