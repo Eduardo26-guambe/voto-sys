@@ -9,7 +9,6 @@ const fs = require('fs');
 
 const app = express();
 
-
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.set('view engine', 'ejs');
@@ -32,37 +31,22 @@ const dbConfig = {
     queueLimit: 0
 };
 
-// Configura SSL de forma flexível
+// Configura SSL
 if (process.env.CA_CERT) {
-    // Se a variável CA_CERT existir (configurada no Railway), usa o certificado
     dbConfig.ssl = { ca: process.env.CA_CERT };
-    console.log('✅ Usando certificado CA da variável de ambiente');
-} else if (process.env.NODE_ENV === 'production') {
-    // Em produção sem CA_CERT, desabilita verificação (apenas para testes)
-    dbConfig.ssl = { rejectUnauthorized: false };
-    console.log('⚠️ Produção: SSL sem verificação de certificado');
 } else {
-    // Localmente, tenta usar o arquivo ca.pem se existir
     try {
         if (fs.existsSync('./ca.pem')) {
             dbConfig.ssl = { ca: fs.readFileSync('./ca.pem') };
-            console.log('✅ Usando certificado CA do arquivo ca.pem');
         } else {
-            console.log('⚠️ Local: ca.pem não encontrado, usando SSL sem verificação');
             dbConfig.ssl = { rejectUnauthorized: false };
         }
     } catch (err) {
-        console.log('🔴 Erro ao ler ca.pem:', err.message);
         dbConfig.ssl = { rejectUnauthorized: false };
     }
 }
 
 const db = mysql.createPool(dbConfig);
-
-// Tratamento de erros no pool
-db.on('error', (err) => {
-    console.error('❌ Erro no pool do MySQL:', err.message);
-});
 
 // ========== ROTAS ==========
 
@@ -112,16 +96,30 @@ app.get('/votar', (req, res) => {
     res.render('index', { nome: req.session.usuarioName, erro: null });
 });
 
+// ALTERADO: Agora a rota de voto envia o usuarioId para o banco
 app.post('/votar', async (req, res) => {
     const { pr, sc, es } = req.body;
+    const usuarioId = req.session.usuarioId;
+
+    if (!usuarioId) return res.redirect('/login');
+
     try {
-        await db.query('INSERT INTO p_votos(p_id) VALUES (?)', [pr]);
-        await db.query('INSERT INTO s_votos(s_id) VALUES (?)', [sc]);
-        await db.query('INSERT INTO e_votos(e_id) VALUES (?)', [es]);
+        // Cada INSERT agora leva o ID de quem está votando
+        await db.query('INSERT INTO p_votos(p_id, user_id) VALUES (?, ?)', [pr, usuarioId]);
+        await db.query('INSERT INTO s_votos(s_id, user_id) VALUES (?, ?)', [sc, usuarioId]);
+        await db.query('INSERT INTO e_votos(e_id, user_id) VALUES (?, ?)', [es, usuarioId]);
+        
         res.redirect('/logout');
     } catch (err) {
         console.error(err);
-        res.render('index', { nome: req.session.usuarioName, erro: 'Falha ao votar' });
+        let msg = 'Falha ao votar';
+        
+        // Verifica se o erro é de voto duplicado (UNIQUE constraint)
+        if (err.code === 'ER_DUP_ENTRY') {
+            msg = 'Você já registrou seu voto nesta eleição!';
+        }
+        
+        res.render('index', { nome: req.session.usuarioName, erro: msg });
     }
 });
 
@@ -156,9 +154,11 @@ app.get('/resultados', async (req, res) => {
 app.get('/logout', (req, res) => {
     req.session.destroy();
     res.send(`
-        <h2>✅ Voto registrado com sucesso!</h2>
-        <p><a href="/credenciais">🔐 Ver resultados (área restrita)</a></p>
-        <p><a href="/login">👤 Novo usuário? Faça login</a></p>
+        <div style="font-family: sans-serif; text-align: center; margin-top: 50px;">
+            <h2>✅ Voto registrado com sucesso!</h2>
+            <p><a href="/credenciais">🔐 Ver resultados (área restrita)</a></p>
+            <p><a href="/login">👤 Sair</a></p>
+        </div>
     `);
 });
 
@@ -180,8 +180,7 @@ app.post('/credenciais', async (req, res) => {
     }
 });
 
-// CORRIGIDO: usa a variável PORT (sem A)
-const PORT= 8081;
+const PORT = 8081;
 app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
