@@ -1,14 +1,6 @@
-<style>
-    *{font-family: system-ui;}
-    body{display: flex;flex-direction: column; align-items: center;padding-top: 20px;}
-    form{display: flex; flex-wrap: wrap;justify-content: center;}
-    .titlo{width: max-content;padding: 3px; border: 2px solid blue;border-radius: 5px;}
-    a{position: relative;left:200px ;width: max-content;color: red;border: 2px solid; padding: 3px;border-radius: 4px;text-decoration: none;}
-    table{background: #999; width: 300px; border-radius: 8px;}
-    td{background: #fff;padding: 5px;}
-    th{padding: 5px;}
-    .user{margin-right: 50%;}
-</style>
+<title>Resultados da votação</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="/main.css">
 <div class="user">Usuário: <%if(user){%> <label style="color: blue;"><%=user%></label> <%}%></div>
 <a href="/login">Sair</a> 
 <h1>Resultados da votação</h1>
@@ -67,8 +59,7 @@
                         <td><%=resultado.total%></td>
                     </tr>
                 </tbody>
-                <%})%>
-            </table>
+            <%})%>
         </table>
 </div>
-</form>
+</form> 

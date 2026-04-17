@@ -1,4 +1,3 @@
--- database.sql
 CREATE DATABASE IF NOT EXISTS defaultdb;
 USE defaultdb;
 
@@ -45,23 +44,32 @@ INSERT INTO est (id, nome) VALUES
 (3, 'Jose'), 
 (4, 'Luana');
 
--- Tabelas de votos
+-- Tabelas de votos com restrição de voto único por usuário
 CREATE TABLE IF NOT EXISTS p_votos(
     id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     p_id INT NOT NULL,
-    FOREIGN KEY (p_id) REFERENCES pres(id)
+    user_id INT NOT NULL,
+    FOREIGN KEY (p_id) REFERENCES pres(id),
+    FOREIGN KEY (user_id) REFERENCES user(id),
+    UNIQUE(user_id) -- Garante apenas 1 voto para Presidente por usuário
 );
 
 CREATE TABLE IF NOT EXISTS s_votos(
     id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     s_id INT NOT NULL,
-    FOREIGN KEY (s_id) REFERENCES sec(id)
+    user_id INT NOT NULL,
+    FOREIGN KEY (s_id) REFERENCES sec(id),
+    FOREIGN KEY (user_id) REFERENCES user(id),
+    UNIQUE(user_id) -- Garante apenas 1 voto para Secretário por usuário
 );
 
 CREATE TABLE IF NOT EXISTS e_votos(
     id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     e_id INT NOT NULL,
-    FOREIGN KEY (e_id) REFERENCES est(id)
+    user_id INT NOT NULL,
+    FOREIGN KEY (e_id) REFERENCES est(id),
+    FOREIGN KEY (user_id) REFERENCES user(id),
+    UNIQUE(user_id) -- Garante apenas 1 voto para Estatístico por usuário
 );
 
 -- Tabela de credenciais
@@ -71,5 +79,10 @@ CREATE TABLE IF NOT EXISTS credencial(
     chave VARCHAR(150) NOT NULL
 );
 
--- Inserir uma credencial inicial (opcional - senha: admin123)
--- INSERT INTO credencial (user, chave) VALUES ('admin', 
+
+mysql --host=mysql-23d30934-eduardomanuelguambe26-b804.i.aivencloud.com \
+      --port=11337 \
+      --user=avnadmin \
+      --password='AVNS_W0LtYipOgMMnr8qb5wF' \
+      --ssl-mode=REQUIRED \
+      defaultdb
